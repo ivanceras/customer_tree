@@ -121,10 +121,11 @@ pub(crate) async fn main() -> anyhow::Result<()> {
 /// A custom datasource, used to represent a datastore with a single index
 #[derive(Clone)]
 pub struct CustomDataSource {
-    inner: Arc<Mutex<CustomDataSourceInner>>,
+    inner: CustomDataSourceInner,
     schema: SchemaRef,
 }
 
+#[derive(Clone)]
 struct CustomDataSourceInner {
     eq_id: Arc<UInt64Array>,
     sponsor_eq_id: Arc<UInt64Array>,
@@ -170,7 +171,7 @@ impl CustomDataSource {
              shipping_address.append_value(c.shipping_address); 
         }
         CustomDataSource {
-            inner: Arc::new(Mutex::new(CustomDataSourceInner {
+            inner: CustomDataSourceInner {
                 eq_id: Arc::new(eq_id.finish()),
                 sponsor_eq_id: Arc::new(sponsor_eq_id.finish()),
                 parent_eq_id: Arc::new(parent_eq_id.finish()),
@@ -181,7 +182,7 @@ impl CustomDataSource {
                 delivery_phone_number: Arc::new(delivery_phone_number.finish()),
                 invoice_address: Arc::new(invoice_address.finish()),
                 shipping_address: Arc::new(shipping_address.finish()),
-            })),
+            },
             schema: SchemaRef::new(schema),
         }
     }
@@ -285,7 +286,7 @@ impl ExecutionPlan for CustomExec {
         _partition: usize,
         _context: Arc<TaskContext>,
     ) -> Result<SendableRecordBatchStream> {
-        let db = self.db.inner.lock().unwrap();
+        let db = &self.db.inner;
 
         Ok(Box::pin(MemoryStream::try_new(
             vec![RecordBatch::try_new(
