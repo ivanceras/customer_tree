@@ -29,7 +29,6 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
 mod customer;
-mod mem;
 
 #[wasm_bindgen(start)]
 pub fn main() {
@@ -37,9 +36,10 @@ pub fn main() {
     console_error_panic_hook::set_once();
     basic_exprs();
     basic_parse();
+    log::info!("attempting to spawn..");
     spawn_local(async move{
-        customer::main().await.unwrap();
-        mem::main().await.unwrap();
+        let ret = customer::main().await;
+        log::info!("ret: {:?}", ret);
     });
 }
 

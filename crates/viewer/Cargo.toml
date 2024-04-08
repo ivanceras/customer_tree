@@ -22,7 +22,9 @@ anyhow = "1.0.81"
 csv = "1.3.0"
 flate2 = "1.0.28"
 serde = { version = "1.0.197", features = ["derive"] }
+gauntlet = { path = "../../../gauntlet" }
 
 [dev-dependencies]
 pretty_env_logger = "0.5.0"
 tokio = { version = "1.37.0", features = ["full"] }
+
