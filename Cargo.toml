@@ -11,3 +11,21 @@ datafusion = "36.0.0"
 flate2 = "1.0.28"
 serde = { version = "1.0.197", features = ["derive"] }
 tokio = { version = "1.37.0", features = ["full"] }
+
+
+[patch.crates-io]
+arrow = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git", default-features = false }
+arrow-arith = { version = "51.0.0",  git = "https://github.com/ivanceras/arrow-rs.git"}
+arrow-array = { version = "51.0.0",  git = "https://github.com/ivanceras/arrow-rs.git"}
+arrow-buffer = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
+arrow-cast = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
+arrow-csv = { version = "51.0.0",  git = "https://github.com/ivanceras/arrow-rs.git"}
+arrow-data = { version = "51.0.0",  git = "https://github.com/ivanceras/arrow-rs.git"}
+arrow-ipc = { version = "51.0.0",  git = "https://github.com/ivanceras/arrow-rs.git"}
+arrow-json = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
+arrow-ord = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
+arrow-row = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git"}
+arrow-schema = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
+arrow-select = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
+arrow-string = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
+
