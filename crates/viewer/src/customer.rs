@@ -12,6 +12,7 @@ use chrono::NaiveDateTime;
 use datafusion::prelude::SessionContext;
 use gauntlet::DataSource;
 use std::io::Cursor;
+use gauntlet::Context;
 
 static DATA: &[u8]  = include_bytes!("../../../data/customer_export.gz");
 
@@ -40,11 +41,6 @@ fn format_date(date: &str) -> Option<NaiveDateTime> {
 /// This example demonstrates executing a simple query against a custom datasource
 pub(crate) async fn main() -> anyhow::Result<()> {
     log::info!("in customer main..");
-    /*
-    log::info!("here in async main..");
-    let in_file = "../../data/customer_export.gz";
-    let in_file = File::open(in_file)?;
-    */
     let in_file = Cursor::new(DATA);
     let mut rdr = csv::ReaderBuilder::new()
         .delimiter(b',')
@@ -90,20 +86,16 @@ pub(crate) async fn main() -> anyhow::Result<()> {
     }
     log::info!("done writing csv..");
 
-    let header = "customer{eq_id:u64,sponsor_eq_id:u64,parent_eq_id:u64,created_date:utc,change_date:utc,full_name:text,invoice_phone_number:text,delivery_phone_number:text,invoice_address:text,shipping_address:text}";
+    let header = "{eq_id:u64,sponsor_eq_id:u64,parent_eq_id:u64,created_date:utc,change_date:utc,full_name:text,invoice_phone_number:text,delivery_phone_number:text,invoice_address:text,shipping_address:text}";
     let data = format!("{}\n{}",header,String::from_utf8(wtr.into_inner()?)?);
-    //log::info!("data: {}", data);
     let customer = DataSource::new(data.as_bytes().to_vec())?;
-    let customer_table = customer.into_memtable()?;
 
 
-    let ctx = SessionContext::new();
+    let ctx = Context::new();
 
-    ctx.register_table("customer", Arc::new(customer_table))?;
-    //let df = ctx.sql("SELECT eq_id, full_name FROM customer LIMIT 5").await?;
+    ctx.register_table("customer", customer)?;
     let df = ctx.sql("SELECT * FROM customer LIMIT 5").await?;
-    let result = df.collect().await?;
-    log::info!("customer: {:#?}", result);
+    println!("{}", df);
 
     Ok(())
 }
