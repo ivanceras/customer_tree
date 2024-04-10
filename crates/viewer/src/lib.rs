@@ -1,21 +1,4 @@
-
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-extern crate wasm_bindgen;
+#![deny(warnings)]
 
 use datafusion::common::{DFSchema, ScalarValue};
 use datafusion_expr::execution_props::ExecutionProps;
@@ -27,8 +10,14 @@ use datafusion::sql::sqlparser::parser::Parser;
 use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+use app::App;
+use error::Error;
+use sauron::Program;
+use data_viewer::views::DataView;
 
 mod customer;
+mod app;
+mod error;
 
 #[wasm_bindgen(start)]
 pub fn main() {
@@ -38,8 +27,16 @@ pub fn main() {
     basic_parse();
     log::info!("attempting to spawn..");
     spawn_local(async move{
-        let ret = customer::main().await;
-        log::info!("ret: {:?}", ret);
+        let data_pane = customer::customer_data().await.unwrap();
+        let mut data_view = DataView::from_data_pane(data_pane).unwrap();
+
+        //let column_widths = [200, 200, 200, 500, 200];
+        //let total_width = column_widths.iter().fold(0, |acc, cw| acc + cw + 10);
+        data_view.set_allocated_size(1000, 600);
+        //data_view.set_column_widths(&column_widths);
+        let width = data_view.allocated_width;
+        let height = data_view.allocated_height;
+        Program::mount_to_body(App::new(data_view, width, height));
     });
 }
 
@@ -73,14 +70,3 @@ pub fn basic_parse() {
 }
 
 
-#[cfg(test)]
-mod test{
-    use super::*;
-
-    #[tokio::test]
-    async fn test1(){
-        pretty_env_logger::init();
-        log::info!("logging check..");
-        customer::main().await.unwrap();
-    }
-}
