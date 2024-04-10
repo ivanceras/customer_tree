@@ -1573,6 +1573,7 @@ dependencies = [
 name = "gauntlet"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "csv",
  "datafusion 37.0.0",
