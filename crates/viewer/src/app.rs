@@ -4,9 +4,12 @@ use sauron::{
     html::{attributes::*, events::*, *},
     jss, Application, Cmd, Component, Node,
 };
+use gauntlet::DataPane;
+use crate::customer;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum Msg {
+    ReceiveDataPane(DataPane),
     DataViewMsg(data_view::Msg),
     MouseMove(i32, i32),
     EndResize(i32, i32),
@@ -15,7 +18,7 @@ pub enum Msg {
 
 /// provides a resizable wrapper for the DataView
 pub struct App {
-    data_view: DataView,
+    data_view: Option<DataView>,
     active_resize: Option<Grip>,
     width: i32,
     height: i32,
@@ -31,12 +34,12 @@ pub enum Grip {
 }
 
 impl App {
-    pub fn new(data_view: DataView, width: i32, height: i32) -> Self {
+    pub fn new() -> Self {
         App {
-            data_view,
+            data_view: None,
             active_resize: None,
-            width,
-            height,
+            width: 400,
+            height: 500,
             start_x: 0,
             start_y: 0,
         }
@@ -57,22 +60,47 @@ impl Application for App {
         Cmd::batch([
             Window::on_mouseup(|event| Msg::EndResize(event.client_x(), event.client_y())),
             Window::on_mousemove(|event| Msg::MouseMove(event.client_x(), event.client_y())),
-            Cmd::from(self.data_view.init().map_msg(Msg::DataViewMsg)),
+
+            Cmd::new(async {
+                let data_pane = customer::customer_data().await.unwrap();
+                Msg::ReceiveDataPane(data_pane)
+            })
         ])
     }
 
     fn update(&mut self, msg: Msg) -> Cmd<Msg> {
         match msg {
+            Msg::ReceiveDataPane(data_pane) => {
+                log::info!("Receiving data pane..");
+                let mut data_view = DataView::from_data_pane(data_pane).unwrap();
+                let column_widths = [200, 200, 200, 500, 200, 200, 200];
+                let total_width = column_widths.iter().fold(0, |acc, cw| acc + cw + 10);
+                data_view.set_allocated_size(total_width, 600);
+                data_view.set_column_widths(&column_widths);
+                let width = data_view.allocated_width;
+                let height = data_view.allocated_height;
+                self.data_view = Some(data_view);
+                self.width = width;
+                self.height = height;
+                Cmd::none()
+            }
             Msg::DataViewMsg(data_view_msg) => {
-                let effects = self.data_view.update(data_view_msg);
-                Cmd::from(effects.map_msg(Msg::DataViewMsg))
+                if let Some(data_view) = self.data_view.as_mut(){
+                    let effects = data_view.update(data_view_msg);
+                    Cmd::from(effects.map_msg(Msg::DataViewMsg))
+                }else{
+                    Cmd::none()
+                }
             }
             Msg::EndResize(client_x, client_y) => {
                 self.active_resize = None;
-                let effects = self
-                    .data_view
-                    .update(data_view::Msg::ColumnEndResize(client_x, client_y));
-                Cmd::from(effects.map_msg(Msg::DataViewMsg))
+                if let Some(data_view) = self.data_view.as_mut(){
+                    let effects = data_view
+                        .update(data_view::Msg::ColumnEndResize(client_x, client_y));
+                    Cmd::from(effects.map_msg(Msg::DataViewMsg))
+                }else{
+                    Cmd::none()
+                }
             }
             Msg::MouseMove(client_x, client_y) => {
                 if let Some(active_resize) = &self.active_resize {
@@ -96,12 +124,17 @@ impl Application for App {
                             self.start_y = client_y;
                         }
                     }
-                    self.data_view.set_allocated_size(self.width, self.height);
+                    if let Some(data_view) = self.data_view.as_mut(){
+                        data_view.set_allocated_size(self.width, self.height);
+                    }
                 }
-                let effects = self
-                    .data_view
-                    .update(data_view::Msg::MouseMove(client_x, client_y));
-                Cmd::from(effects.map_msg(Msg::DataViewMsg))
+                if let Some(data_view) = self.data_view.as_mut(){
+                    let effects = data_view
+                        .update(data_view::Msg::MouseMove(client_x, client_y));
+                    Cmd::from(effects.map_msg(Msg::DataViewMsg))
+                }else{
+                    Cmd::none()
+                }
             }
             Msg::StartResize(grip, client_x, client_y) => {
                 self.active_resize = Some(grip);
@@ -116,7 +149,12 @@ impl Application for App {
         main(
             [class("resize_wrapper grid")],
             [
-                self.data_view.view().map_msg(Msg::DataViewMsg),
+                if let Some(data_view) = &self.data_view{
+                    data_view.view().map_msg(Msg::DataViewMsg)
+                }else{
+                    log::info!("loading..");
+                    div([], [text("Loading..")])
+                },
                 div(
                     [
                         class("resize_wrapper__resize_grip resize_wrapper__resize_grip--right"),
