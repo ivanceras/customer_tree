@@ -13,6 +13,7 @@ pub enum Msg {
     StartResize(Grip, i32, i32),
     SqlChanged(String),
     ExecuteSql,
+    QueryError(gauntlet::Error),
 }
 
 /// provides a resizable wrapper for the DataView
@@ -21,6 +22,7 @@ pub struct App {
     data_view: Option<DataView>,
     active_resize: Option<Grip>,
     sql: String,
+    query_error: Option<gauntlet::Error>,
     width: i32,
     height: i32,
     start_x: i32,
@@ -40,6 +42,7 @@ impl App {
             data_view: None,
             active_resize: None,
             sql: "SELECT * FROM customer LIMIT 10".to_string(),
+            query_error: None,
             width: 400,
             height: 500,
             start_x: 0,
@@ -53,8 +56,10 @@ impl App {
             let ctx = Context::new();
             let data_pane = customer::customer_data().await.unwrap();
             ctx.register_table("customer", data_pane).unwrap();
-            let records: DataPane = ctx.sql(&sql).await.unwrap();
-            Msg::ReceiveDataPane(records)
+            match ctx.sql(&sql).await{
+                Ok(records) => Msg::ReceiveDataPane(records),
+                Err(e) => Msg::QueryError(e),
+            }
         })
     }
 }
@@ -155,7 +160,12 @@ impl Application for App {
                 Cmd::none()
             }
             Msg::ExecuteSql => {
+                self.query_error = None;
                 self.execute_sql()
+            }
+            Msg::QueryError(e) => {
+                self.query_error = Some(e);
+                Cmd::none()
             }
         }
     }
@@ -176,6 +186,11 @@ impl Application for App {
                         [text(&self.sql)],
                     ),
                     button([on_click(|_|Msg::ExecuteSql)],[text("Execute SQL")]),
+                    if let Some(error) = self.query_error.as_ref(){
+                        div([], [text!("{error}")])
+                    }else{
+                        span([],[])
+                    },
                     ],
                 ),
                 div(
