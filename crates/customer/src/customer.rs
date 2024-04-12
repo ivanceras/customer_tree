@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 use chrono::NaiveDateTime;
 use gauntlet::DataSource;
 use std::io::Cursor;
-use gauntlet::Context;
 use crate::Error;
-use gauntlet::DataPane;
 
 static DATA: &[u8]  = include_bytes!("../../../data/customer_export.gz");
 
