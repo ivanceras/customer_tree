@@ -5,7 +5,7 @@ use sauron::{
     jss, Application, Cmd, Component, Node,
 };
 use gauntlet::DataPane;
-use crate::customer;
+use customer;
 
 #[derive(Debug)]
 pub enum Msg {
@@ -63,7 +63,7 @@ impl Application for App {
 
             Cmd::new(async {
                 let data_pane = customer::customer_data().await.unwrap();
-                Msg::ReceiveDataPane(data_pane)
+                Msg::ReceiveDataPane(data_pane.data)
             })
         ])
     }

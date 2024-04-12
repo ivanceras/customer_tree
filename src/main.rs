@@ -1,8 +1,5 @@
-use error::Error;
 use gauntlet::Context;
 
-mod customer;
-mod error;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

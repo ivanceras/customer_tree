@@ -1,13 +1,9 @@
 #![deny(warnings)]
 
-use wasm_bindgen::prelude::*;
 use app::App;
-use error::Error;
-use sauron::Program;
+use sauron::*;
 
-mod customer;
 mod app;
-mod error;
 
 #[wasm_bindgen(start)]
 pub fn main() {

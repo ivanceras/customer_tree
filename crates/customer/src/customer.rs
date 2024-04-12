@@ -9,7 +9,7 @@ use gauntlet::Context;
 use crate::Error;
 use gauntlet::DataPane;
 
-static DATA: &[u8]  = include_bytes!("../data/customer_export.gz");
+static DATA: &[u8]  = include_bytes!("../../../data/customer_export.gz");
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -34,7 +34,7 @@ fn format_date(date: &str) -> Option<NaiveDateTime> {
 
 
 /// This example demonstrates executing a simple query against a custom datasource
-pub(crate) async fn customer_data() -> Result<DataSource, Error> {
+pub async fn customer_data() -> Result<DataSource, Error> {
     log::info!("in customer main..");
     let in_file = Cursor::new(DATA);
     let mut rdr = csv::ReaderBuilder::new()
