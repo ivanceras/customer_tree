@@ -251,7 +251,7 @@ div.checkbox{
  * Wraps any widgets that can resize itself
  * it may also propagate the resize event into the widgets it contains
  */
-.resize_wrapper{
+.app{
     margin: 20px;
 }
 

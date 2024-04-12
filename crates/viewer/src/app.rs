@@ -1,11 +1,8 @@
-use data_viewer::views::{data_view, DataView};
-use sauron::Window;
-use sauron::{
-    html::{attributes::*, events::*, *},
-    jss, Application, Cmd, Component, Node,
-};
-use gauntlet::DataPane;
 use customer;
+use data_viewer::views::{data_view, DataView};
+use gauntlet::Context;
+use gauntlet::DataPane;
+use sauron::*;
 
 #[derive(Debug)]
 pub enum Msg {
@@ -14,12 +11,16 @@ pub enum Msg {
     MouseMove(i32, i32),
     EndResize(i32, i32),
     StartResize(Grip, i32, i32),
+    SqlChanged(String),
+    ExecuteSql,
 }
 
 /// provides a resizable wrapper for the DataView
+#[derive(Default)]
 pub struct App {
     data_view: Option<DataView>,
     active_resize: Option<Grip>,
+    sql: String,
     width: i32,
     height: i32,
     start_x: i32,
@@ -38,11 +39,23 @@ impl App {
         App {
             data_view: None,
             active_resize: None,
+            sql: "SELECT * FROM customer LIMIT 10".to_string(),
             width: 400,
             height: 500,
             start_x: 0,
             start_y: 0,
         }
+    }
+
+    fn execute_sql(&mut self) -> Cmd<Msg>{
+        let sql = self.sql.clone();
+        Cmd::new(async move{
+            let ctx = Context::new();
+            let data_pane = customer::customer_data().await.unwrap();
+            ctx.register_table("customer", data_pane).unwrap();
+            let records: DataPane = ctx.sql(&sql).await.unwrap();
+            Msg::ReceiveDataPane(records)
+        })
     }
 }
 
@@ -60,11 +73,7 @@ impl Application for App {
         Cmd::batch([
             Window::on_mouseup(|event| Msg::EndResize(event.client_x(), event.client_y())),
             Window::on_mousemove(|event| Msg::MouseMove(event.client_x(), event.client_y())),
-
-            Cmd::new(async {
-                let data_pane = customer::customer_data().await.unwrap();
-                Msg::ReceiveDataPane(data_pane.data)
-            })
+            self.execute_sql(),
         ])
     }
 
@@ -85,20 +94,20 @@ impl Application for App {
                 Cmd::none()
             }
             Msg::DataViewMsg(data_view_msg) => {
-                if let Some(data_view) = self.data_view.as_mut(){
+                if let Some(data_view) = self.data_view.as_mut() {
                     let effects = data_view.update(data_view_msg);
                     Cmd::from(effects.map_msg(Msg::DataViewMsg))
-                }else{
+                } else {
                     Cmd::none()
                 }
             }
             Msg::EndResize(client_x, client_y) => {
                 self.active_resize = None;
-                if let Some(data_view) = self.data_view.as_mut(){
-                    let effects = data_view
-                        .update(data_view::Msg::ColumnEndResize(client_x, client_y));
+                if let Some(data_view) = self.data_view.as_mut() {
+                    let effects =
+                        data_view.update(data_view::Msg::ColumnEndResize(client_x, client_y));
                     Cmd::from(effects.map_msg(Msg::DataViewMsg))
-                }else{
+                } else {
                     Cmd::none()
                 }
             }
@@ -124,15 +133,14 @@ impl Application for App {
                             self.start_y = client_y;
                         }
                     }
-                    if let Some(data_view) = self.data_view.as_mut(){
+                    if let Some(data_view) = self.data_view.as_mut() {
                         data_view.set_allocated_size(self.width, self.height);
                     }
                 }
-                if let Some(data_view) = self.data_view.as_mut(){
-                    let effects = data_view
-                        .update(data_view::Msg::MouseMove(client_x, client_y));
+                if let Some(data_view) = self.data_view.as_mut() {
+                    let effects = data_view.update(data_view::Msg::MouseMove(client_x, client_y));
                     Cmd::from(effects.map_msg(Msg::DataViewMsg))
-                }else{
+                } else {
                     Cmd::none()
                 }
             }
@@ -142,56 +150,81 @@ impl Application for App {
                 self.start_y = client_y;
                 Cmd::none()
             }
+            Msg::SqlChanged(sql) => {
+                self.sql = sql;
+                Cmd::none()
+            }
+            Msg::ExecuteSql => {
+                self.execute_sql()
+            }
         }
     }
 
     fn view(&self) -> Node<Msg> {
-        main(
-            [class("resize_wrapper grid")],
+        main([class("app")],
             [
-                if let Some(data_view) = &self.data_view{
-                    data_view.view().map_msg(Msg::DataViewMsg)
-                }else{
-                    log::info!("loading..");
-                    div([], [text("Loading..")])
-                },
                 div(
-                    [
-                        class("resize_wrapper__resize_grip resize_wrapper__resize_grip--right"),
-                        on_mousedown(|event| {
-                            Msg::StartResize(Grip::Right, event.client_x(), event.client_y())
-                        }),
-                    ],
                     [],
+                    [textarea(
+                        [style!{
+                            display: "inline-block",
+                            width: px(1000),
+                            height: px(200),
+                        },
+                        on_change(|e|Msg::SqlChanged(e.value())),
+                        ],
+                        [text(&self.sql)],
+                    ),
+                    button([on_click(|_|Msg::ExecuteSql)],[text("Execute SQL")]),
+                    ],
                 ),
                 div(
+                    [class("resize_wrapper grid")],
                     [
-                        class("resize_wrapper__resize_grip resize_wrapper__resize_grip--bottom"),
-                        on_mousedown(|event| {
-                            Msg::StartResize(Grip::Bottom, event.client_x(), event.client_y())
-                        }),
-                    ],
-                    [],
-                ),
-                div(
-                    [
-                        class(
-                            "resize_wrapper__resize_grip resize_wrapper__resize_grip--bottom_right",
+                        if let Some(data_view) = &self.data_view {
+                            data_view.view().map_msg(Msg::DataViewMsg)
+                        } else {
+                            log::info!("loading..");
+                            div([], [text("Loading..")])
+                        },
+                        div(
+                            [
+                                class("resize_wrapper__resize_grip resize_wrapper__resize_grip--right"),
+                                on_mousedown(|event| {
+                                    Msg::StartResize(Grip::Right, event.client_x(), event.client_y())
+                                }),
+                            ],
+                            [],
                         ),
-                        on_mousedown(|event| {
-                            Msg::StartResize(Grip::BottomRight, event.client_x(), event.client_y())
-                        }),
+                        div(
+                            [
+                                class("resize_wrapper__resize_grip resize_wrapper__resize_grip--bottom"),
+                                on_mousedown(|event| {
+                                    Msg::StartResize(Grip::Bottom, event.client_x(), event.client_y())
+                                }),
+                            ],
+                            [],
+                        ),
+                        div(
+                            [
+                                class(
+                                    "resize_wrapper__resize_grip resize_wrapper__resize_grip--bottom_right",
+                                ),
+                                on_mousedown(|event| {
+                                    Msg::StartResize(Grip::BottomRight, event.client_x(), event.client_y())
+                                }),
+                            ],
+                            [],
+                        ),
+                        a(
+                            [href(
+                                "https://github.com/ivanceras/sauron/tree/master/examples/data-viewer/",
+                            )],
+                            [text("code")],
+                        ),
                     ],
-                    [],
-                ),
-                a(
-                    [href(
-                        "https://github.com/ivanceras/sauron/tree/master/examples/data-viewer/",
-                    )],
-                    [text("code")],
-                ),
-            ],
-        )
+                )
+            ])
     }
 
     fn stylesheet() -> Vec<String> {
