@@ -9,7 +9,7 @@ use gauntlet::Context;
 use crate::Error;
 use gauntlet::DataPane;
 
-static DATA: &[u8]  = include_bytes!("../../../data/customer_export.gz");
+static DATA: &[u8]  = include_bytes!("../data/customer_export.gz");
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -34,7 +34,7 @@ fn format_date(date: &str) -> Option<NaiveDateTime> {
 
 
 /// This example demonstrates executing a simple query against a custom datasource
-pub(crate) async fn customer_data() -> Result<DataPane, Error> {
+pub(crate) async fn customer_data() -> Result<DataSource, Error> {
     log::info!("in customer main..");
     let in_file = Cursor::new(DATA);
     let mut rdr = csv::ReaderBuilder::new()
@@ -76,23 +76,15 @@ pub(crate) async fn customer_data() -> Result<DataPane, Error> {
 
     log::info!("Creating a csv..");
     let mut wtr = csv::WriterBuilder::new().has_headers(false).from_writer(vec![]);
-    for c in customers.iter().take(100){
+    for c in customers.iter().take(100_000){
         wtr.serialize(c)?;
     }
     log::info!("done writing csv..");
 
-    let header = "{eq_id:u64,sponsor_eq_id:u64,parent_eq_id:u64,created_date:utc,change_date:utc,full_name:text,invoice_phone_number:text,delivery_phone_number:text,invoice_address:text,shipping_address:text}";
+    let header = "{eq_id:u64?,sponsor_eq_id:u64?,parent_eq_id:u64?,created_date:utc,change_date:utc?,full_name:text,invoice_phone_number:text,delivery_phone_number:text,invoice_address:text,shipping_address:text}";
     let data = format!("{}\n{}",header,String::from_utf8(wtr.into_inner().unwrap())?);
-    let customer = DataSource::new(data.as_bytes().to_vec())?;
-
-
-    let ctx = Context::new();
-
-    ctx.register_table("customer", customer)?;
-    let df = ctx.sql("SELECT * FROM customer").await?;
-    println!("{}", df);
-
-    Ok(df)
+    let data_source = DataSource::from_csv(data.into_bytes())?;
+    Ok(data_source)
 }
 
 
