@@ -64,11 +64,8 @@ async fn main() -> anyhow::Result<()> {
         let sponsored: i64 = get_sponsored_count(&ctx, eq_id).await?;
         println!("{eq_id}, {full_name}, children: {children}, sponsored: {sponsored}");
         let children = get_children(&ctx, eq_id).await?;
-        println!("children:");
+        println!("children (top 5):");
         children.show()?;
-        let sponsored = get_sponsored(&ctx, eq_id).await?;
-        println!("sponsored:");
-        sponsored.show()?;
     }
     Ok(())
 }
