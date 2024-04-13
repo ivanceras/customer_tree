@@ -1,4 +1,21 @@
 use gauntlet::Context;
+use gauntlet::DataPane;
+
+async fn get_children(ctx: &Context, eq_id: u64) -> anyhow::Result<DataPane>{
+    let sql = format!("SELECT eq_id, full_name, parent_eq_id 
+        FROM customer 
+        WHERE customer.parent_eq_id = {eq_id} LIMIT 5");
+    let d1 = ctx.sql(&sql).await?;
+    Ok(d1)
+}
+
+async fn get_sponsored(ctx: &Context, eq_id: u64) -> anyhow::Result<DataPane>{
+    let sql = format!("SELECT eq_id, full_name, parent_eq_id 
+        FROM customer 
+        WHERE customer.sponsor_eq_id = {eq_id} LIMIT 5");
+    let d1 = ctx.sql(&sql).await?;
+    Ok(d1)
+}
 
 
 #[tokio::main]
@@ -8,16 +25,25 @@ async fn main() -> anyhow::Result<()> {
     let ctx = Context::new();
 
     ctx.register_table("customer", data_source)?;
+    let count = ctx.sql("SELECT COUNT(*) FROM customer").await?;
+    count.show()?;
     // top-level customer with no recruiter
-    let data = ctx.sql("SELECT * FROM customer WHERE parent_eq_id IS NULL").await?;
-    let d1 = ctx.sql("SELECT t1.eq_id, t1.full_name, 
-        (SELECT count(eq_id) as children FROM customer t3 WHERE t3.parent_eq_id = t1.eq_id)
-        FROM customer t1 ORDER BY children DESC LIMIT 20").await?;
-    d1.show()?;
+    let data = ctx.sql("SELECT *, 
+                (SELECT COUNT(*) as children 
+                    FROM customer t1 
+                    WHERE t1.parent_eq_id=customer.eq_id)
+                FROM customer 
+                ORDER BY children DESC 
+                LIMIT 10").await?;
 
-    let d2 = ctx.sql("SELECT t1.eq_id, t1.full_name, 
-        (SELECT count(eq_id) as sponsored FROM customer t3 WHERE t3.sponsor_eq_id = t1.eq_id)
-        FROM customer t1 ORDER BY sponsored DESC LIMIT 20").await?;
-    d2.show()?;
+    for data in data.row_values{
+        let eq_id = Into::into(&data[0]);
+        let children = get_children(&ctx, eq_id).await?;
+        println!("children:");
+        children.show()?;
+        let sponsored = get_sponsored(&ctx, eq_id).await?;
+        println!("sponsored:");
+        sponsored.show()?;
+    }
     Ok(())
 }

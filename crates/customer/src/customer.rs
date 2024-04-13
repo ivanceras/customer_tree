@@ -74,12 +74,12 @@ pub async fn customer_data() -> Result<DataSource, Error> {
 
     log::info!("Creating a csv..");
     let mut wtr = csv::WriterBuilder::new().has_headers(false).from_writer(vec![]);
-    for c in customers.iter().take(100_000){
+    for c in customers.iter(){
         wtr.serialize(c)?;
     }
     log::info!("done writing csv..");
 
-    let header = "{eq_id:u64?,sponsor_eq_id:u64?,parent_eq_id:u64?,created_date:utc,change_date:utc?,full_name:text,invoice_phone_number:text,delivery_phone_number:text,invoice_address:text,shipping_address:text}";
+    let header = "{eq_id:u64?,sponsor_eq_id:u64?,parent_eq_id:u64?,created_date:utc?,change_date:utc?,full_name:text,invoice_phone_number:text,delivery_phone_number:text,invoice_address:text,shipping_address:text}";
     let data = format!("{}\n{}",header,String::from_utf8(wtr.into_inner().unwrap())?);
     let data_source = DataSource::from_csv(data.into_bytes())?;
     Ok(data_source)
