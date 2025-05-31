@@ -2433,6 +2433,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arrow 54.3.1",
+ "csv",
  "datafusion 46.0.1",
  "tokio",
 ]
