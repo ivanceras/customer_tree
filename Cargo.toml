@@ -1,4 +1,4 @@
-workspace = { members = [ "crates/customer", "crates/graph","crates/viewer"] }
+workspace = { members = [ "crates/customer", "crates/graph", "crates/map","crates/viewer"] }
 [package]
 name = "customer_tree"
 version = "0.1.0"
@@ -26,4 +26,3 @@ arrow-row = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.g
 arrow-schema = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
 arrow-select = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
 arrow-string = { version = "51.0.0", git = "https://github.com/ivanceras/arrow-rs.git" }
-
