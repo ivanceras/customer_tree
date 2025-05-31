@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    ctx.register_csv("cities", "./data/worldcities.csv", CsvReadOptions::new())
+    ctx.register_csv("cities", "./data/cities.csv", CsvReadOptions::new())
         .await?;
 
     let extract_city = Arc::new(|args: &[ColumnarValue]| {
@@ -56,26 +56,27 @@ async fn main() -> anyhow::Result<()> {
         Volatility::Immutable,
         extract_city,
     );
-    ctx.register_udf(extract_city.clone());
+    ctx.register_udf(extract_city);
 
-    // create a plan
-    let df = ctx
-        .sql("SELECT city, lat, lng, iso2, extract_city(2) AS power FROM cities ORDER BY city ASC LIMIT 100")
-        .await?;
-    df.clone().show().await.unwrap();
+
+    let df = ctx.sql("SELECT * from cities LIMIT 10").await?;
+    df.show().await.unwrap();
+
 
     let df = ctx
-        .sql("WITH t1 AS
+        .sql(
+            "WITH t1 AS
             (SELECT full_name, extract_city(shipping_address) AS city_addr
                 FROM customer
             )
-            SELECT t1.*, cities.lat, cities.lng from t1
-                LEFT JOIN cities ON cities.city = t1.city_addr
-            ")
+            SELECT t1.*, cities.latitude, cities.longitude from t1
+                LEFT JOIN cities ON cities.name = t1.city_addr
+            ORDER BY full_name ASC
+            LIMIT 1000
+            ",
+        )
         .await?;
-    df.clone().show().await.unwrap();
-
-    let results: Vec<RecordBatch> = df.collect().await?;
+    df.show().await.unwrap();
 
     Ok(())
 }
