@@ -1,0 +1,10 @@
+[package]
+name = "map"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+datafusion = "46.0.0"
+arrow = { version = "=54.3.1", features = ["prettyprint"] }
+tokio = { version = "1", features = ["full"] }

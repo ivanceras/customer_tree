@@ -156,6 +156,7 @@ impl Application for App {
                 Cmd::none()
             }
             Msg::SqlChanged(sql) => {
+                log::info!("sql changed to: {sql}");
                 self.sql = sql;
                 Cmd::none()
             }
